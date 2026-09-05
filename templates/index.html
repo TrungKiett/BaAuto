@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Automator Studio – AI Agent</title>
+    <meta name="description" content="Công cụ tự động hóa trình duyệt web tích hợp AI Agent thông minh">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- ── Update Notification Banner ────────────────────────────── -->
+    <div id="update-banner" class="update-banner hidden" role="alert">
+        <div class="update-banner-content">
+            <span class="update-icon">🆕</span>
+            <div class="update-info">
+                <strong id="update-version-text">Có bản cập nhật mới!</strong>
+                <span id="update-notes-preview" class="update-notes"></span>
+            </div>
+            <div class="update-actions">
+                <button id="update-now-btn" class="btn-update-now">
+                    <i class='bx bx-download'></i> Cập nhật ngay
+                </button>
+                <button id="update-later-btn" class="btn-update-later" title="Nhắc lại sau">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+        </div>
+        <!-- Download progress (ẩn mặc định) -->
+        <div id="update-progress-bar-wrap" class="update-progress-wrap hidden">
+            <div class="update-progress-track">
+                <div class="update-progress-fill" id="update-progress-fill"></div>
+            </div>
+            <span id="update-progress-label" class="update-progress-label">Đang chuẩn bị...</span>
+        </div>
+    </div>
+
+    <!-- ── Browser Setup Banner (lần đầu cài đặt) ──────────────── -->
+    <div id="browser-setup-banner" class="browser-setup-banner hidden" role="alert">
+        <div class="update-banner-content">
+            <span class="update-icon">🌐</span>
+            <div class="update-info">
+                <strong>Cần cài đặt trình duyệt lần đầu</strong>
+                <span class="update-notes">Playwright Chromium chưa được cài. Cần tải về ~150MB (một lần duy nhất).</span>
+            </div>
+            <div class="update-actions">
+                <button id="install-browser-btn" class="btn-update-now">
+                    <i class='bx bx-download'></i> Cài trình duyệt
+                </button>
+            </div>
+        </div>
+        <div id="browser-install-log" class="browser-install-log hidden"></div>
+    </div>
+
+    <div class="glass-container">
+
+        <!-- ── Header ───────────────────────────────────────────────────── -->
+        <header>
+            <div class="logo">
+                <i class='bx bx-bot'></i>
+                <h1>Web Automator <span>Studio</span></h1>
+                <span class="version-badge" id="version-badge">v{{ version }}</span>
+            </div>
+
+            <!-- Tab switcher -->
+            <div class="tab-switcher" role="tablist" aria-label="Chế độ">
+                <button id="tab-script" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-script">
+                    <i class='bx bx-code-block'></i> Kịch Bản
+                </button>
+                <button id="tab-ai" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-ai">
+                    <i class='bx bx-brain'></i> AI Agent
+                    <span class="tab-badge">NEW</span>
+                </button>
+            </div>
+
+            <!-- Script tab actions -->
+            <div class="header-actions" id="script-tab-actions">
+                <input type="text" id="script-name" placeholder="Tên kịch bản (vd: DangNhap)" aria-label="Tên kịch bản">
+                <button id="new-btn" class="btn btn-secondary">
+                    <i class='bx bx-plus'></i> Tạo Mới
+                </button>
+                <button id="save-btn" class="btn btn-secondary">
+                    <i class='bx bx-save'></i> Lưu Lại
+                </button>
+                <button id="run-btn" class="btn btn-primary">
+                    <i class='bx bx-play'></i> Chạy Kịch Bản
+                </button>
+            </div>
+
+            <!-- AI tab actions -->
+            <div class="header-actions hidden" id="ai-tab-actions">
+                <div class="agent-status-bar" id="agent-status-bar">
+                    <span class="status-dot idle" id="status-dot"></span>
+                    <span id="status-label">Chờ lệnh</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!--  PANEL 1: Script Builder                                   -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <div id="panel-script" class="tab-panel active">
+
+                <div class="sidebar">
+                    <h2>Kịch bản đã lưu</h2>
+                    <div id="saved-scripts-list" class="saved-scripts-list"></div>
+
+                    <h2>Cấu hình Trình Duyệt</h2>
+                    <div class="form-group">
+                        <label for="config-browser">Loại trình duyệt</label>
+                        <select id="config-browser">
+                            <option value="chromium">Chromium</option>
+                            <option value="firefox">Firefox</option>
+                            <option value="webkit">WebKit (Safari)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="config-headless">Chế độ chạy ngầm</label>
+                        <select id="config-headless">
+                            <option value="false">Tắt (Hiện UI)</option>
+                            <option value="true">Bật (Chạy ngầm)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="config-keep-open">Giữ trình duyệt sau khi chạy</label>
+                        <select id="config-keep-open">
+                            <option value="true">Bật (Giữ trình duyệt)</option>
+                            <option value="false">Tắt (Tự đóng lại)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="config-slowmo">Tốc độ thực thi (ms)</label>
+                        <input type="number" id="config-slowmo" value="500" min="0">
+                    </div>
+
+                    <div class="actions-panel">
+                        <h2>Thêm Hành Động</h2>
+                        <button class="add-step-btn" data-action="navigate"><i class='bx bx-globe'></i> Truy cập Trang</button>
+                        <button class="add-step-btn" data-action="click_element"><i class='bx bx-pointer'></i> Click</button>
+                        <button class="add-step-btn" data-action="fill_input"><i class='bx bx-edit-alt'></i> Nhập Văn Bản</button>
+                        <button class="add-step-btn" data-action="fill_with_retry"><i class='bx bx-check-shield'></i> Nhập Có Kiểm Tra</button>
+                        <button class="add-step-btn" data-action="get_text"><i class='bx bx-text'></i> Đọc Văn Bản</button>
+                        <button class="add-step-btn" data-action="drag_and_drop"><i class='bx bx-move'></i> Kéo Thả</button>
+                        <button class="add-step-btn" data-action="wait"><i class='bx bx-time'></i> Dừng Chờ</button>
+                    </div>
+
+                    <div class="help-box">
+                        <h3><i class='bx bx-bulb'></i> Mẹo lấy CSS Selector</h3>
+                        <p>1. Mở web bằng Google Chrome<br>
+                        2. Click chuột phải vào nút/ô nhập > <b>Inspect</b> (Kiểm tra)<br>
+                        3. Chuột phải vào dòng code bôi đen > <b>Copy</b> > <b>Copy selector</b><br>
+                        4. Dán (Paste) đoạn mã đó vào ô CSS Selector.</p>
+                    </div>
+                </div>
+
+                <div class="canvas-area">
+                    <div class="script-header">
+                        <h2>Kịch bản hiện tại</h2>
+                        <span class="step-count">0 bước</span>
+                    </div>
+                    <div id="steps-container" class="steps-container">
+                        <div class="empty-state">
+                            <i class='bx bx-layer'></i>
+                            <p>Chưa có bước nào trong kịch bản.<br>Bấm các nút bên trái để thêm bước.</p>
+                        </div>
+                    </div>
+                    <div id="results-panel" class="results-panel hidden">
+                        <div class="results-header">
+                            <h3>Kết quả chạy</h3>
+                            <button id="close-results"><i class='bx bx-x'></i></button>
+                        </div>
+                        <div id="results-content"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!--  PANEL 2: AI Agent                                         -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <div id="panel-ai" class="tab-panel hidden">
+
+                <!-- ── AI Config Sidebar ─────────────────────────────── -->
+                <div class="sidebar ai-sidebar">
+
+                    <h2><i class='bx bx-cog'></i> Cấu hình AI</h2>
+
+                    <div class="form-group">
+                        <label for="ai-provider">AI Provider</label>
+                        <select id="ai-provider">
+                            <option value="gemini">🟢 Google Gemini</option>
+                            <option value="openai">⚫ OpenAI GPT-4o</option>
+                            <option value="claude">🟠 Anthropic Claude</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ai-model">Model (để trống = mặc định)</label>
+                        <input type="text" id="ai-model" placeholder="vd: gemini-2.0-flash">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ai-apikey">API Key <span class="required-star">*</span></label>
+                        <div class="api-key-wrapper">
+                            <input type="password" id="ai-apikey" placeholder="Dán API Key vào đây..." autocomplete="off">
+                            <button class="btn-icon toggle-apikey" id="toggle-apikey" title="Hiện/ẩn API key" type="button">
+                                <i class='bx bx-show'></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ai-max-steps">Số bước tối đa</label>
+                        <input type="number" id="ai-max-steps" value="20" min="1" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ai-browser">Trình duyệt</label>
+                        <select id="ai-browser">
+                            <option value="chromium">Chromium</option>
+                            <option value="firefox">Firefox</option>
+                            <option value="webkit">WebKit</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ai-headless">Chế độ hiển thị</label>
+                        <select id="ai-headless">
+                            <option value="false">Hiện trình duyệt</option>
+                            <option value="true">Ẩn (headless)</option>
+                        </select>
+                    </div>
+
+                    <button id="save-ai-config-btn" class="btn btn-secondary full-width">
+                        <i class='bx bx-save'></i> Lưu cấu hình
+                    </button>
+
+                    <div class="model-hints" id="model-hints">
+                        <h3><i class='bx bx-info-circle'></i> Model gợi ý</h3>
+                        <div class="hint-list" id="hint-list"></div>
+                    </div>
+                </div>
+
+                <!-- ── AI Main Area ──────────────────────────────────── -->
+                <div class="ai-main-area">
+
+                    <!-- Goal input -->
+                    <div class="goal-section">
+                        <div class="goal-header">
+                            <i class='bx bx-target-lock'></i>
+                            <h2>Mục tiêu</h2>
+                        </div>
+                        <textarea id="ai-goal" placeholder="Mô tả điều bạn muốn AI thực hiện...&#10;&#10;Ví dụ: Vào google.com, tìm kiếm 'playwright python', click vào kết quả đầu tiên và đọc tiêu đề trang." rows="4"></textarea>
+
+                        <div class="url-row">
+                            <div class="form-group" style="flex:1">
+                                <label for="ai-start-url">URL bắt đầu</label>
+                                <input type="url" id="ai-start-url" placeholder="https://..." value="https://google.com">
+                            </div>
+                            <div class="ai-controls">
+                                <button id="ai-start-btn" class="btn btn-ai-start" aria-label="Bắt đầu AI Agent">
+                                    <i class='bx bx-play-circle'></i>
+                                    <span>Bắt đầu</span>
+                                </button>
+                                <button id="ai-stop-btn" class="btn btn-ai-stop hidden" aria-label="Dừng AI Agent">
+                                    <i class='bx bx-stop-circle'></i>
+                                    <span>Dừng</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="progress-section hidden" id="progress-section">
+                        <div class="progress-info">
+                            <span id="progress-label">Bước 0 / 20</span>
+                            <span id="progress-status-text" class="thinking-pulse">Đang khởi động...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Live log -->
+                    <div class="live-log-container">
+                        <div class="log-toolbar">
+                            <span class="log-title"><i class='bx bx-terminal'></i> Live Log</span>
+                            <button id="clear-log-btn" class="btn-icon" title="Xóa log" type="button">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </div>
+                        <div id="ai-log" class="ai-log">
+                            <div class="log-empty-state">
+                                <i class='bx bx-brain'></i>
+                                <p>Nhập mục tiêu và bấm <strong>Bắt đầu</strong> để AI Agent hoạt động</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Screenshot Modal -->
+    <div id="screenshot-modal" class="screenshot-modal hidden" role="dialog" aria-modal="true" aria-label="Xem screenshot">
+        <div class="screenshot-modal-backdrop" id="modal-backdrop"></div>
+        <div class="screenshot-modal-content">
+            <button class="btn-icon close-modal" id="close-modal" aria-label="Đóng">
+                <i class='bx bx-x'></i>
+            </button>
+            <img id="modal-img" src="" alt="Screenshot trang web">
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

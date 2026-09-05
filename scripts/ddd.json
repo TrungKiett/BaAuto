@@ -1,0 +1,15 @@
+{
+    "steps": [
+        {
+            "action": "drag_and_drop",
+            "selector": "",
+            "target": ""
+        }
+    ],
+    "config": {
+        "browser_type": "chromium",
+        "headless": false,
+        "keep_open": true,
+        "slow_mo": 500
+    }
+}

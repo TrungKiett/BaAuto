@@ -1,0 +1,24 @@
+{
+  "target_url": "https://example.com",
+  "headless": false,
+  "slow_mo": 50,
+  "browser_type": "chromium",
+  "ai_config": {
+    "default_provider": "gemini",
+    "max_steps": 20,
+    "providers": {
+      "gemini": {
+        "api_key": "",
+        "model": "gemini-2.0-flash"
+      },
+      "openai": {
+        "api_key": "",
+        "model": "gpt-4o"
+      },
+      "claude": {
+        "api_key": "",
+        "model": "claude-opus-4-5"
+      }
+    }
+  }
+}
