@@ -18,6 +18,8 @@ dist/
 *.spec
 desktop_app_dist/
 release/
+release_build/
+release_spec/
 
 # App runtime files
 _update_*.exe

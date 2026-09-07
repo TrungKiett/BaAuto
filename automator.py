@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Error as PlaywrightError, sync_playwright
 import re
 import time
 
@@ -26,10 +26,42 @@ class WebAutomator:
         else:
             browser_type = self.playwright.chromium
 
-        self.browser = browser_type.launch(
-            headless=self.headless,
-            slow_mo=self.slow_mo
-        )
+        launch_options = {
+            "headless": self.headless,
+            "slow_mo": self.slow_mo,
+        }
+
+        try:
+            self.browser = browser_type.launch(**launch_options)
+        except PlaywrightError as primary_error:
+            # Bản desktop không mang theo browser của Playwright để tránh file
+            # cài đặt quá nặng. Trên Windows, dùng Edge/Chrome có sẵn là đủ
+            # để automation hoạt động mà không cần tải browser riêng lần đầu.
+            if self.browser_type_name != "chromium":
+                self.playwright.stop()
+                self.playwright = None
+                raise
+
+            fallback_errors = []
+            for channel, browser_name in (("msedge", "Microsoft Edge"), ("chrome", "Google Chrome")):
+                try:
+                    self.browser = self.playwright.chromium.launch(
+                        channel=channel,
+                        **launch_options,
+                    )
+                    print(f"Playwright Chromium chưa có. Đang dùng {browser_name} có sẵn trên máy.")
+                    break
+                except PlaywrightError as fallback_error:
+                    fallback_errors.append(f"{browser_name}: {fallback_error}")
+            else:
+                self.playwright.stop()
+                self.playwright = None
+                raise RuntimeError(
+                    "Không tìm thấy Chromium của Playwright, Microsoft Edge hoặc Google Chrome. "
+                    "Hãy cài Microsoft Edge/Google Chrome, hoặc cài Playwright Chromium từ phần thiết lập của app. "
+                    f"Chi tiết: {' | '.join(fallback_errors)}"
+                ) from primary_error
+
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
         print(f"[{self.browser_type_name}] Browser started. Headless: {self.headless}")
