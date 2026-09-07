@@ -199,6 +199,7 @@ def apply_update(new_exe_path: str, progress_queue: queue.Queue):
 setlocal EnableExtensions
 set "NEW_EXE={new_exe_path}"
 set "CURRENT_EXE={current_exe}"
+set "OLD_EXE={current_exe}.previous"
 set "UPDATE_LOG={log_path}"
 :wait_for_app_exit
 tasklist /FI "PID eq {os.getpid()}" /NH | findstr /R /C:"\\<{os.getpid()}\\>" >nul
@@ -206,12 +207,21 @@ if not errorlevel 1 (
     timeout /t 1 /nobreak >nul
     goto wait_for_app_exit
 )
-move /Y "%NEW_EXE%" "%CURRENT_EXE%" >nul
+del /Q "%OLD_EXE%" >nul 2>&1
+move /Y "%CURRENT_EXE%" "%OLD_EXE%" >nul
 if errorlevel 1 (
-    >"%UPDATE_LOG%" echo Khong the thay the file app. Hay dong tat ca cua so Web Automator Studio va thu lai.
+    >"%UPDATE_LOG%" echo Khong the doi ten file app cu. Hay dong tat ca cua so Web Automator Studio va thu lai.
     del "%~f0"
     exit /b 1
 )
+move /Y "%NEW_EXE%" "%CURRENT_EXE%" >nul
+if errorlevel 1 (
+    move /Y "%OLD_EXE%" "%CURRENT_EXE%" >nul
+    >"%UPDATE_LOG%" echo Khong the dat file cap nhat moi. Da khoi phuc ban cu.
+    del "%~f0"
+    exit /b 1
+)
+del /Q "%OLD_EXE%" >nul 2>&1
 >"%UPDATE_LOG%" echo Cap nhat thanh cong. Dang khoi dong lai app.
 start "" "%CURRENT_EXE%"
 del "%~f0"
