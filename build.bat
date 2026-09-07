@@ -53,9 +53,13 @@ echo.
     --onefile ^
     --noconsole ^
     --name "WebAutomatorStudio" ^
+    --icon "assets\web_automator_studio.ico" ^
     --add-data "templates;templates" ^
     --add-data "static;static" ^
     --collect-all playwright ^
+    --collect-all webview ^
+    --collect-all pythonnet ^
+    --collect-all clr_loader ^
     --collect-submodules google.genai ^
     --collect-submodules anthropic ^
     --hidden-import=flask ^
@@ -66,6 +70,8 @@ echo.
     --hidden-import=updater ^
     --hidden-import=version ^
     --hidden-import=automator ^
+    --hidden-import=webview ^
+    --hidden-import=webview.platforms.winforms ^
     --hidden-import=google.genai ^
     --hidden-import=openai ^
     --hidden-import=anthropic ^

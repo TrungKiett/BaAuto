@@ -16,6 +16,8 @@ env/
 build/
 dist/
 *.spec
+desktop_app_dist/
+release/
 
 # App runtime files
 _update_*.exe

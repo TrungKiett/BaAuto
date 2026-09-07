@@ -59,11 +59,21 @@ document.addEventListener('DOMContentLoaded', () => {
         ]},
         'get_text':       { icon: 'bx-text',           title: 'Đọc Văn Bản',                    inputs: [{ name: 'selector', label: 'CSS Selector', type: 'text', placeholder: 'Dán Selector của đoạn text cần đọc' }] },
         'drag_and_drop':  { icon: 'bx-move',           title: 'Kéo Thả',                        inputs: [
-            { name: 'selector',     label: 'CSS Selector nguồn (phần tử kéo)', type: 'text',   placeholder: 'Selector của vật kéo' },
-            { name: 'source_index', label: 'Phần tử nguồn thứ mấy?',             type: 'number', placeholder: '1', value: 1, min: 1, step: 1 },
+            { name: 'selector',     label: 'CSS Selector nguồn (phần tử kéo)', type: 'text',   placeholder: 'Selector của các field trên thanh thêm' },
+            { name: 'source_text',  label: 'Tên field nguồn (ưu tiên)',          type: 'text',   placeholder: 'vd: Single hoặc Number', required: false },
             { name: 'target',       label: 'CSS Selector đích (chỗ thả)',       type: 'text',   placeholder: 'Selector của khu vực thả' },
-            { name: 'target_index', label: 'Phần tử đích thứ mấy?',              type: 'number', placeholder: '1', value: 1, min: 1, step: 1 }
-        ], help: 'Nếu nhiều field dùng cùng selector, nhập thứ tự của từng field theo vị trí trên trang (bắt đầu từ 1). Ví dụ: kéo .field nguồn thứ 2 vào .field đích thứ 5.' },
+            { name: 'target_text',  label: 'Nội dung field đích (nếu cần)',      type: 'text',   placeholder: 'Để trống nếu chỉ có một khu vực thả', required: false },
+            { name: 'source_index', label: 'Số thứ tự nguồn (chỉ khi trùng tên)', type: 'number', placeholder: 'Tùy chọn', min: 1, step: 1, required: false },
+            { name: 'target_index', label: 'Số thứ tự đích (chỉ khi trùng tên)',  type: 'number', placeholder: 'Tùy chọn', min: 1, step: 1, required: false }
+        ], help: 'Ưu tiên nhập tên field hiển thị như Single, Number hoặc Lookup — ứng dụng sẽ tự tìm đúng field. Chỉ dùng số thứ tự khi nhiều field có cả selector lẫn tên giống hệt nhau.' },
+        'create_field':   { icon: 'bx-layer-plus',     title: 'Thêm Field (Kéo + Nhập + Lưu)',  inputs: [
+            { name: 'source_selector',     label: 'CSS Selector field trên thanh thêm', type: 'text', placeholder: 'Selector của các ô Single, Number…' },
+            { name: 'source_text',          label: 'Tên/loại field cần thêm',             type: 'text', placeholder: 'vd: Single' },
+            { name: 'target',               label: 'CSS Selector khu vực thả',            type: 'text', placeholder: 'Selector của vùng thiết kế form' },
+            { name: 'field_input_selector', label: 'CSS ô nhập tên field vừa tạo',         type: 'text', placeholder: 'Selector chung của các ô tên field' },
+            { name: 'value',                label: 'Tên field muốn nhập',                 type: 'text', placeholder: 'vd: ThanhToan' },
+            { name: 'save_selector',        label: 'CSS nút Lưu',                          type: 'text', placeholder: 'Selector nút Lưu' }
+        ], help: 'Một bước hoàn chỉnh cho từng field: kéo đúng loại theo tên, chờ ô tên mới xuất hiện, nhập nội dung rồi bấm Lưu. Không cần biết số thứ tự của field.' },
         'wait':           { icon: 'bx-time',           title: 'Dừng Chờ',                       inputs: [{ name: 'value',    label: 'Thời gian chờ (giây)', type: 'number', placeholder: 'vd: 3' }] }
     };
 

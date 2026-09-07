@@ -6,7 +6,6 @@ import sys
 import time
 import threading
 import queue
-import webbrowser
 
 from automator import WebAutomator
 from ai_agent import session_manager
@@ -118,6 +117,8 @@ def run_script():
                         target,
                         step.get('source_index', 1),
                         step.get('target_index', 1),
+                        step.get('source_text'),
+                        step.get('target_text'),
                     )
                     results.append({
                         "step": step,
@@ -126,6 +127,23 @@ def run_script():
                             f"Đã kéo phần tử nguồn thứ {drag_result['source_index']}/"
                             f"{drag_result['source_count']} tới phần tử đích thứ "
                             f"{drag_result['target_index']}/{drag_result['target_count']}."
+                        ),
+                    })
+                elif action == 'create_field':
+                    field_result = bot.create_field(
+                        step.get('source_selector'),
+                        step.get('source_text'),
+                        step.get('target'),
+                        step.get('field_input_selector'),
+                        step.get('value'),
+                        step.get('save_selector'),
+                    )
+                    results.append({
+                        "step": step,
+                        "status": "success",
+                        "message": (
+                            f"Đã thêm field '{field_result['field_name']}', nhập tên và lưu. "
+                            f"Tổng số ô tên field hiện có: {field_result['total_inputs']}."
                         ),
                     })
                 elif action == 'wait':
@@ -384,36 +402,40 @@ def api_check_browsers():
 # ── App Entry Point ────────────────────────────────────────────────────
 
 def find_free_port(start: int = 5000) -> int:
-    """Tìm port trống bắt đầu từ `start`."""
+    """Tìm port trống cho chế độ phát triển chạy trong trình duyệt."""
     import socket
     for port in range(start, start + 20):
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('127.0.0.1', port))
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('127.0.0.1', port))
                 return port
         except OSError:
             continue
-    return start  # fallback
+    return start
 
 
-def open_browser_delayed(url: str, delay: float = 1.5):
-    """Mở trình duyệt sau một khoảng delay (để Flask khởi động xong)."""
-    def _open():
-        time.sleep(delay)
-        webbrowser.open(url)
-    threading.Thread(target=_open, daemon=True).start()
+def run_desktop_app():
+    """Mở giao diện trong cửa sổ desktop native, không gọi trình duyệt ngoài."""
+    import webview
+
+    webview.create_window(
+        title=f"{APP_NAME} v{VERSION}",
+        url=app,
+        width=1440,
+        height=900,
+        min_size=(1080, 680),
+        background_color="#091a38",
+    )
+    webview.start()
 
 
 if __name__ == '__main__':
     is_packaged = getattr(sys, 'frozen', False)
-    port = find_free_port(5000)
-    url  = f"http://127.0.0.1:{port}"
 
     if is_packaged:
-        # Chạy từ .exe: tự mở trình duyệt, không debug
-        print(f"[Web Automator Studio v{VERSION}] Starting on {url}")
-        open_browser_delayed(url)
-        app.run(host='127.0.0.1', port=port, debug=False, threaded=True)
+        # Chạy từ .exe: hiển thị trong cửa sổ desktop riêng.
+        run_desktop_app()
     else:
-        # Chạy từ source: debug mode
+        # Chạy từ source: Flask debug mode cho việc phát triển.
+        port = find_free_port(5000)
         app.run(host='127.0.0.1', port=port, debug=True, threaded=True)

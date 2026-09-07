@@ -4,6 +4,7 @@ Công cụ tự động hóa trình duyệt web tích hợp **AI Agent thông mi
 
 ## ✨ Tính năng
 
+- 🖥️ **Ứng dụng desktop riêng** — Chạy trong cửa sổ Windows, không mở tab trình duyệt
 - 🎯 **Kịch bản thủ công** — Tạo và chạy automation scripts bằng UI trực quan
 - 🤖 **AI Agent tự chủ** — Mô tả mục tiêu bằng tiếng Việt, AI tự tìm cách thực hiện
 - 📸 **Vision + DOM** — AI quan sát trang qua screenshot + nội dung DOM
@@ -38,7 +39,7 @@ Mở trình duyệt tại: http://127.0.0.1:5000
 build.bat
 ```
 
-File `.exe` sẽ được tạo tại `dist/WebAutomatorStudio.exe`
+File `.exe` sẽ được tạo tại `dist/WebAutomatorStudio.exe` và mở trong cửa sổ ứng dụng Windows riêng. Icon ứng dụng dùng file `assets/web_automator_studio.ico`.
 
 ## 🔄 Phát hành bản cập nhật
 

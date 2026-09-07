@@ -1,4 +1,5 @@
 from playwright.sync_api import sync_playwright
+import re
 import time
 
 class WebAutomator:
@@ -106,29 +107,48 @@ class WebAutomator:
             raise ValueError(f"Số thứ tự {label} phải lớn hơn hoặc bằng 1.")
         return index
 
-    def _locator_at_occurrence(self, selector, occurrence, label):
-        """Lấy phần tử thứ N của một selector và báo lỗi dễ hiểu nếu N không tồn tại."""
+    def _locator_at_occurrence(
+        self, selector, occurrence, label, match_text=None, exact_text=False
+    ):
+        """Lấy phần tử thứ N của selector; có thể lọc theo nội dung hiển thị."""
         index = self._normalise_occurrence(occurrence, label)
         locator = self.page.locator(selector)
+        selector_description = f"'{selector}'"
+        if match_text is not None and str(match_text).strip():
+            match_text = str(match_text).strip()
+            text_matcher = (
+                re.compile(rf"^\s*{re.escape(match_text)}\s*$")
+                if exact_text else match_text
+            )
+            locator = locator.filter(has_text=text_matcher)
+            selector_description += f" có nội dung '{match_text}'"
 
         # Chờ phần tử đầu tiên xuất hiện để các trang tải động vẫn hoạt động.
         locator.first.wait_for(state="attached")
         count = locator.count()
         if index > count:
             raise ValueError(
-                f"Selector {label} '{selector}' chỉ tìm thấy {count} phần tử, "
+                f"Selector {label} {selector_description} chỉ tìm thấy {count} phần tử, "
                 f"không có phần tử thứ {index}."
             )
 
         return locator.nth(index - 1), index, count
 
-    def drag_and_drop(self, source_selector, target_selector, source_index=1, target_index=1):
-        """Kéo phần tử thứ N của selector nguồn tới phần tử thứ M của selector đích."""
+    def drag_and_drop(
+        self,
+        source_selector,
+        target_selector,
+        source_index=1,
+        target_index=1,
+        source_text=None,
+        target_text=None,
+    ):
+        """Kéo thả theo nội dung hiển thị hoặc số thứ tự khi các selector bị trùng."""
         source, source_index, source_count = self._locator_at_occurrence(
-            source_selector, source_index, "nguồn"
+            source_selector, source_index, "nguồn", source_text, exact_text=True
         )
         target, target_index, target_count = self._locator_at_occurrence(
-            target_selector, target_index, "đích"
+            target_selector, target_index, "đích", target_text
         )
 
         print(
@@ -141,6 +161,48 @@ class WebAutomator:
             "source_count": source_count,
             "target_index": target_index,
             "target_count": target_count,
+        }
+
+    def _wait_for_newest_element(self, selector, previous_count, timeout_seconds=10):
+        """Chờ phần tử mới xuất hiện sau thao tác kéo thả rồi trả về phần tử mới nhất."""
+        deadline = time.monotonic() + timeout_seconds
+        locator = self.page.locator(selector)
+        while time.monotonic() < deadline:
+            count = locator.count()
+            if count > previous_count:
+                return locator.nth(count - 1), count
+            time.sleep(0.1)
+
+        raise TimeoutError(
+            f"Không thấy ô nhập mới với selector '{selector}' sau {timeout_seconds} giây. "
+            "Hãy dùng selector chỉ áp dụng cho ô tên field trong vùng thiết kế."
+        )
+
+    def create_field(
+        self,
+        source_selector,
+        source_text,
+        target_selector,
+        field_input_selector,
+        field_name,
+        save_selector,
+    ):
+        """Kéo một field theo tên, điền tên vào ô mới tạo và lưu trong một bước."""
+        initial_input_count = self.page.locator(field_input_selector).count()
+        drag_result = self.drag_and_drop(
+            source_selector,
+            target_selector,
+            source_text=source_text,
+        )
+        new_input, total_inputs = self._wait_for_newest_element(
+            field_input_selector, initial_input_count
+        )
+        new_input.fill(field_name)
+        self.click_element(save_selector)
+        return {
+            **drag_result,
+            "field_name": field_name,
+            "total_inputs": total_inputs,
         }
 
     def wait(self, seconds):
