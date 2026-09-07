@@ -49,7 +49,9 @@ class WebAutomator:
                         channel=channel,
                         **launch_options,
                     )
-                    print(f"Playwright Chromium chưa có. Đang dùng {browser_name} có sẵn trên máy.")
+                    # stdout của ứng dụng đóng gói trên một số máy Windows dùng
+                    # bảng mã cũ, vì vậy log nội bộ chỉ dùng ký tự ASCII.
+                    print(f"Playwright Chromium missing. Using installed {browser_name}.")
                     break
                 except PlaywrightError as fallback_error:
                     fallback_errors.append(f"{browser_name}: {fallback_error}")

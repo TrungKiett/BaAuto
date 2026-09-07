@@ -5,6 +5,98 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // ── Desktop app update ────────────────────────────────────────────
+    // Chỉ hiện trên file .exe. Khi có bản mới, người dùng có thể tải và
+    // thay thế app ngay từ cửa sổ hiện tại.
+    const updateBanner       = document.getElementById('update-banner');
+    const updateVersionText  = document.getElementById('update-version-text');
+    const updateNotesPreview = document.getElementById('update-notes-preview');
+    const updateNowBtn       = document.getElementById('update-now-btn');
+    const updateLaterBtn     = document.getElementById('update-later-btn');
+    const updateProgressWrap = document.getElementById('update-progress-bar-wrap');
+    const updateProgressFill = document.getElementById('update-progress-fill');
+    const updateProgressLabel = document.getElementById('update-progress-label');
+    let updateDownloadUrl = '';
+
+    function hideUpdateBanner() {
+        updateBanner.classList.add('hidden');
+    }
+
+    function showUpdateProgress(item) {
+        updateProgressWrap.classList.remove('hidden');
+        if (typeof item.progress === 'number') {
+            updateProgressFill.style.width = `${Math.max(0, Math.min(100, item.progress))}%`;
+        }
+        if (item.message) updateProgressLabel.textContent = item.message;
+    }
+
+    async function applyDesktopUpdate() {
+        if (!updateDownloadUrl) return;
+
+        updateNowBtn.disabled = true;
+        updateLaterBtn.disabled = true;
+        showUpdateProgress({ progress: 0, message: 'Đang chuẩn bị cập nhật...' });
+
+        try {
+            const response = await fetch('/api/apply-update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ download_url: updateDownloadUrl })
+            });
+            if (!response.ok || !response.body) {
+                throw new Error('Không thể bắt đầu cập nhật.');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+                for (const event of events) {
+                    const payload = event.split('\n').find(line => line.startsWith('data: '));
+                    if (!payload) continue;
+                    const item = JSON.parse(payload.slice(6));
+                    if (item.status !== 'waiting') showUpdateProgress(item);
+                    if (item.status === 'error') {
+                        updateNowBtn.disabled = false;
+                        updateLaterBtn.disabled = false;
+                    }
+                }
+            }
+        } catch (error) {
+            showUpdateProgress({ message: `Cập nhật chưa thành công: ${error.message}` });
+            updateNowBtn.disabled = false;
+            updateLaterBtn.disabled = false;
+        }
+    }
+
+    async function checkDesktopUpdate() {
+        try {
+            const response = await fetch('/api/check-update');
+            const update = await response.json();
+            if (!update.has_update || !update.download_url) return;
+
+            updateDownloadUrl = update.download_url;
+            updateVersionText.textContent = `Có bản cập nhật v${update.latest_version}`;
+            const notes = (update.release_notes || '')
+                .replace(/[#*_`]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            updateNotesPreview.textContent = notes.slice(0, 150) || 'Cập nhật mới đã sẵn sàng.';
+            updateBanner.classList.remove('hidden');
+        } catch (_) {
+            // Không làm gián đoạn công việc khi không có Internet hoặc GitHub tạm lỗi.
+        }
+    }
+
+    updateNowBtn.addEventListener('click', applyDesktopUpdate);
+    updateLaterBtn.addEventListener('click', hideUpdateBanner);
+    checkDesktopUpdate();
+
     // ── Tab Switching ──────────────────────────────────────────────────
     const tabScript  = document.getElementById('tab-script');
     const tabAi      = document.getElementById('tab-ai');
