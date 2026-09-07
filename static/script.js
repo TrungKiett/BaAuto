@@ -58,7 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'submit_selector', label: 'Selector Nút xác nhận (Tùy chọn)', type: 'text', placeholder: 'Để trống nếu tự kiểm tra', required: false }
         ]},
         'get_text':       { icon: 'bx-text',           title: 'Đọc Văn Bản',                    inputs: [{ name: 'selector', label: 'CSS Selector', type: 'text', placeholder: 'Dán Selector của đoạn text cần đọc' }] },
-        'drag_and_drop':  { icon: 'bx-move',           title: 'Kéo Thả',                        inputs: [{ name: 'selector', label: 'CSS Selector nguồn (phần tử kéo)', type: 'text', placeholder: 'Selector của vật kéo' }, { name: 'target', label: 'CSS Selector đích (chỗ thả)', type: 'text', placeholder: 'Selector của khu vực thả' }] },
+        'drag_and_drop':  { icon: 'bx-move',           title: 'Kéo Thả',                        inputs: [
+            { name: 'selector',     label: 'CSS Selector nguồn (phần tử kéo)', type: 'text',   placeholder: 'Selector của vật kéo' },
+            { name: 'source_index', label: 'Phần tử nguồn thứ mấy?',             type: 'number', placeholder: '1', value: 1, min: 1, step: 1 },
+            { name: 'target',       label: 'CSS Selector đích (chỗ thả)',       type: 'text',   placeholder: 'Selector của khu vực thả' },
+            { name: 'target_index', label: 'Phần tử đích thứ mấy?',              type: 'number', placeholder: '1', value: 1, min: 1, step: 1 }
+        ], help: 'Nếu nhiều field dùng cùng selector, nhập thứ tự của từng field theo vị trí trên trang (bắt đầu từ 1). Ví dụ: kéo .field nguồn thứ 2 vào .field đích thứ 5.' },
         'wait':           { icon: 'bx-time',           title: 'Dừng Chờ',                       inputs: [{ name: 'value',    label: 'Thời gian chờ (giây)', type: 'number', placeholder: 'vd: 3' }] }
     };
 
@@ -79,10 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let inputsHtml = '';
         const inputClass = actionDef.inputs.length === 1 ? 'single-input' : '';
         actionDef.inputs.forEach(input => {
+            const value = input.value !== undefined ? ` value="${input.value}"` : '';
+            const min   = input.min !== undefined ? ` min="${input.min}"` : '';
+            const step  = input.step !== undefined ? ` step="${input.step}"` : '';
             inputsHtml += `
                 <div class="form-group">
                     <label>${input.label}</label>
-                    <input type="${input.type}" name="${input.name}" placeholder="${input.placeholder || ''}" ${input.required === false ? '' : 'required'}>
+                    <input type="${input.type}" name="${input.name}" placeholder="${input.placeholder || ''}"${value}${min}${step} ${input.required === false ? '' : 'required'}>
                 </div>`;
         });
 
@@ -95,7 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button type="button" class="btn-icon delete-step" title="Xóa bước"><i class='bx bx-trash'></i></button>
                 </div>
             </div>
-            <div class="step-inputs ${inputClass}">${inputsHtml}</div>`;
+            <div class="step-inputs ${inputClass}">${inputsHtml}</div>
+            ${actionDef.help ? `<p class="step-help"><i class='bx bx-info-circle'></i> ${actionDef.help}</p>` : ''}`;
 
         card.querySelector('.move-up').addEventListener('click', () => {
             const prev = card.previousElementSibling;
@@ -289,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Model hints per provider
     const MODEL_HINTS = {
-        gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+        gemini: ['gemini-3.6-flash', 'gemini-3.6-flash-lite', 'gemini-2.5-pro', 'gemini-2.0-flash'],
         openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
         claude: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'],
     };

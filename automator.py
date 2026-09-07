@@ -91,10 +91,57 @@ class WebAutomator:
         """Lấy text của một phần tử"""
         return self.page.locator(selector).text_content()
 
-    def drag_and_drop(self, source_selector, target_selector):
-        """Kéo thả một phần tử tới phần tử đích"""
-        print(f"Dragging {source_selector} to {target_selector}")
-        self.page.drag_and_drop(source_selector, target_selector)
+    @staticmethod
+    def _normalise_occurrence(occurrence, label):
+        """Chuyển số thứ tự người dùng nhập thành index 1-based hợp lệ."""
+        if occurrence is None or str(occurrence).strip() == "":
+            return 1
+
+        try:
+            index = int(str(occurrence).strip())
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Số thứ tự {label} phải là số nguyên bắt đầu từ 1.") from exc
+
+        if index < 1:
+            raise ValueError(f"Số thứ tự {label} phải lớn hơn hoặc bằng 1.")
+        return index
+
+    def _locator_at_occurrence(self, selector, occurrence, label):
+        """Lấy phần tử thứ N của một selector và báo lỗi dễ hiểu nếu N không tồn tại."""
+        index = self._normalise_occurrence(occurrence, label)
+        locator = self.page.locator(selector)
+
+        # Chờ phần tử đầu tiên xuất hiện để các trang tải động vẫn hoạt động.
+        locator.first.wait_for(state="attached")
+        count = locator.count()
+        if index > count:
+            raise ValueError(
+                f"Selector {label} '{selector}' chỉ tìm thấy {count} phần tử, "
+                f"không có phần tử thứ {index}."
+            )
+
+        return locator.nth(index - 1), index, count
+
+    def drag_and_drop(self, source_selector, target_selector, source_index=1, target_index=1):
+        """Kéo phần tử thứ N của selector nguồn tới phần tử thứ M của selector đích."""
+        source, source_index, source_count = self._locator_at_occurrence(
+            source_selector, source_index, "nguồn"
+        )
+        target, target_index, target_count = self._locator_at_occurrence(
+            target_selector, target_index, "đích"
+        )
+
+        print(
+            f"Dragging source #{source_index}/{source_count} ({source_selector}) "
+            f"to target #{target_index}/{target_count} ({target_selector})"
+        )
+        source.drag_to(target)
+        return {
+            "source_index": source_index,
+            "source_count": source_count,
+            "target_index": target_index,
+            "target_count": target_count,
+        }
 
     def wait(self, seconds):
         """Dừng một khoảng thời gian (tính bằng giây)"""

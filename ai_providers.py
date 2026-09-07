@@ -143,7 +143,7 @@ class BaseAIProvider(ABC):
 class GeminiProvider(BaseAIProvider):
     """Google Gemini Vision provider (dùng google-genai SDK mới nhất)."""
 
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.6-flash"):
         super().__init__(api_key, model)
         self._client = None
 
@@ -274,7 +274,7 @@ def create_provider(provider_name: str, api_key: str, model: str = None) -> Base
         Instance của BaseAIProvider tương ứng
     """
     defaults = {
-        "gemini": ("gemini-2.0-flash", GeminiProvider),
+        "gemini": ("gemini-3.6-flash", GeminiProvider),
         "openai": ("gpt-4o", OpenAIProvider),
         "claude": ("claude-opus-4-5", ClaudeProvider),
     }

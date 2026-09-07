@@ -9,7 +9,7 @@
     "providers": {
       "gemini": {
         "api_key": "",
-        "model": "gemini-2.0-flash"
+        "model": "gemini-3.6-flash"
       },
       "openai": {
         "api_key": "",

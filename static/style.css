@@ -551,6 +551,16 @@ h2 {
 
 .step-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 .step-inputs.single-input { grid-template-columns: 1fr; }
+.step-help {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    margin: 0.8rem 0 0;
+    color: var(--text-subtle);
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+.step-help i { color: var(--primary); font-size: 0.95rem; margin-top: 0.08rem; }
 
 /* ── Results Panel ───────────────────────────────────────────────────── */
 .results-panel {
@@ -1215,4 +1225,3 @@ body.has-double-banner .glass-container {
     margin-top: 130px;
     height: calc(93vh - 130px);
 }
-

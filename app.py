@@ -113,8 +113,21 @@ def run_script():
                     results.append({"step": step, "status": "success", "message": f"Got text from {selector}: '{text}'"})
                 elif action == 'drag_and_drop':
                     target = step.get('target')
-                    bot.drag_and_drop(selector, target)
-                    results.append({"step": step, "status": "success", "message": f"Dragged {selector} to {target}"})
+                    drag_result = bot.drag_and_drop(
+                        selector,
+                        target,
+                        step.get('source_index', 1),
+                        step.get('target_index', 1),
+                    )
+                    results.append({
+                        "step": step,
+                        "status": "success",
+                        "message": (
+                            f"Đã kéo phần tử nguồn thứ {drag_result['source_index']}/"
+                            f"{drag_result['source_count']} tới phần tử đích thứ "
+                            f"{drag_result['target_index']}/{drag_result['target_count']}."
+                        ),
+                    })
                 elif action == 'wait':
                     seconds = float(value)
                     bot.wait(seconds)

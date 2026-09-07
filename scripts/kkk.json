@@ -1,0 +1,36 @@
+{
+    "steps": [
+        {
+            "action": "navigate",
+            "value": "https://dpmclouduat.vuthao.com/qc/workflow/default.aspx?ss=0&p="
+        },
+        {
+            "action": "click_element",
+            "selector": "#Username"
+        },
+        {
+            "action": "fill_input",
+            "selector": "#Username",
+            "value": "gd1@vuthao.vn"
+        },
+        {
+            "action": "click_element",
+            "selector": "#Password"
+        },
+        {
+            "action": "fill_input",
+            "selector": "#Password",
+            "value": "VuThao123!@#"
+        },
+        {
+            "action": "click_element",
+            "selector": "#formLogin > table > tbody > tr:nth-child(5) > td > input"
+        }
+    ],
+    "config": {
+        "browser_type": "chromium",
+        "headless": false,
+        "keep_open": true,
+        "slow_mo": 500
+    }
+}
