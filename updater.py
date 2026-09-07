@@ -191,30 +191,33 @@ def apply_update(new_exe_path: str, progress_queue: queue.Queue):
             return
 
         exe_dir  = os.path.dirname(current_exe)
-        bat_path = os.path.join(exe_dir, "_update_swap.bat")
+        bat_path = os.path.join(exe_dir, f"_update_swap_{os.getpid()}.cmd")
+        log_path = os.path.join(exe_dir, "_update_result.log")
 
         # Tạo batch script để swap file
         bat_content = f"""@echo off
-echo Dang cap nhat Web Automator Studio...
-timeout /t 2 /nobreak > nul
-:wait_loop
-tasklist /FI "PID eq {os.getpid()}" 2>nul | find /I "WebAutomatorStudio" > nul
+setlocal EnableExtensions
+set "NEW_EXE={new_exe_path}"
+set "CURRENT_EXE={current_exe}"
+set "UPDATE_LOG={log_path}"
+:wait_for_app_exit
+tasklist /FI "PID eq {os.getpid()}" /NH | findstr /R /C:"[ ]{os.getpid()}[ ]*$" >nul
 if not errorlevel 1 (
-    timeout /t 1 /nobreak > nul
-    goto wait_loop
+    timeout /t 1 /nobreak >nul
+    goto wait_for_app_exit
 )
-move /y "{new_exe_path}" "{current_exe}" > nul
+move /Y "%NEW_EXE%" "%CURRENT_EXE%" >nul
 if errorlevel 1 (
-    echo Loi: Khong the thay the file. Hay thu lai.
-    pause
-    goto end
+    >"%UPDATE_LOG%" echo Khong the thay the file app. Hay dong tat ca cua so Web Automator Studio va thu lai.
+    del "%~f0"
+    exit /b 1
 )
-echo Cap nhat thanh cong! Dang khoi dong lai...
-start "" "{current_exe}"
-:end
+>"%UPDATE_LOG%" echo Cap nhat thanh cong. Dang khoi dong lai app.
+start "" "%CURRENT_EXE%"
 del "%~f0"
 """
-        with open(bat_path, 'w', encoding='utf-8') as f:
+        # Nội dung chỉ có ASCII để cmd.exe luôn đọc đúng trên Windows.
+        with open(bat_path, 'w', encoding='ascii') as f:
             f.write(bat_content)
 
         progress_queue.put({"status": "applying", "progress": 100, "message": "Đang áp dụng cập nhật..."})
@@ -222,8 +225,9 @@ del "%~f0"
 
         # Chạy batch script độc lập (không chờ)
         subprocess.Popen(
-            ['cmd', '/c', bat_path],
-            creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
+            ['cmd.exe', '/d', '/c', bat_path],
+            # Tách process thay file khỏi app hiện tại để nó vẫn sống sau os._exit().
+            creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
             close_fds=True
         )
 

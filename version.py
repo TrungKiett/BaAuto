@@ -1,5 +1,5 @@
 # Thông tin phiên bản và GitHub repository
-VERSION = "1.0.5"
+VERSION = "1.0.6"
 APP_NAME = "Web Automator Studio"
 
 # ── Điền thông tin GitHub của bạn vào đây ──────────────────────────────
