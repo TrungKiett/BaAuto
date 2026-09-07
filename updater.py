@@ -201,7 +201,7 @@ set "NEW_EXE={new_exe_path}"
 set "CURRENT_EXE={current_exe}"
 set "UPDATE_LOG={log_path}"
 :wait_for_app_exit
-tasklist /FI "PID eq {os.getpid()}" /NH | findstr /R /C:"[ ]{os.getpid()}[ ]*$" >nul
+tasklist /FI "PID eq {os.getpid()}" /NH | findstr /R /C:"\\<{os.getpid()}\\>" >nul
 if not errorlevel 1 (
     timeout /t 1 /nobreak >nul
     goto wait_for_app_exit
