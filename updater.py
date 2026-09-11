@@ -223,6 +223,9 @@ if errorlevel 1 (
 )
 del /Q "%OLD_EXE%" >nul 2>&1
 >"%UPDATE_LOG%" echo Cap nhat thanh cong. Dang khoi dong lai app.
+rem PyInstaller 6.22+ can inherit onefile runtime variables from the old
+rem application. Mark this launch as a new top-level app before restarting.
+set "PYINSTALLER_RESET_ENVIRONMENT=1"
 start "" "%CURRENT_EXE%"
 del "%~f0"
 """
