@@ -75,7 +75,7 @@ def run_script():
 
     headless   = config.get('headless', False)
     slow_mo    = int(config.get('slow_mo', 50))
-    browser_type = config.get('browser_type', 'chromium')
+    browser_type = config.get('browser_type', 'chrome')
     keep_open  = config.get('keep_open', True)
 
     bot = WebAutomator(headless=headless, slow_mo=slow_mo, browser_type=browser_type)
@@ -213,7 +213,7 @@ def ai_start():
         api_key      = data.get('api_key', '').strip()
         model        = data.get('model') or None
         max_steps    = int(data.get('max_steps', 20))
-        browser_type = data.get('browser_type', 'chromium')
+        browser_type = data.get('browser_type', 'chrome')
         headless     = data.get('headless', False)
 
         if not goal:     return jsonify({"error": "Thiếu mục tiêu (goal)"}), 400

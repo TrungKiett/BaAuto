@@ -3,7 +3,7 @@ import re
 import time
 
 class WebAutomator:
-    def __init__(self, headless=False, slow_mo=50, browser_type="chromium"):
+    def __init__(self, headless=False, slow_mo=50, browser_type="chrome"):
         self.headless = headless
         self.slow_mo = slow_mo
         self.browser_type_name = browser_type
@@ -17,52 +17,68 @@ class WebAutomator:
     def start(self):
         """Khởi động trình duyệt"""
         self.playwright = sync_playwright().start()
+
+        launch_options = {
+            "headless": self.headless,
+            "slow_mo": self.slow_mo,
+        }
         
+        # Google Chrome là mặc định vì đây là trình duyệt người dùng thường
+        # dùng để lấy CSS selector. Dùng channel giúp Playwright mở Chrome
+        # đã cài trên Windows, không phụ thuộc browser Chromium đi kèm.
+        if self.browser_type_name == "chrome":
+            try:
+                self.browser = self.playwright.chromium.launch(
+                    channel="chrome",
+                    **launch_options,
+                )
+            except PlaywrightError as error:
+                self.playwright.stop()
+                self.playwright = None
+                raise RuntimeError(
+                    "Không thể mở Google Chrome. Hãy cài Google Chrome hoặc chọn trình duyệt khác trong app."
+                ) from error
         # Chọn loại trình duyệt dựa trên cấu hình
-        if self.browser_type_name == "firefox":
+        elif self.browser_type_name == "firefox":
             browser_type = self.playwright.firefox
         elif self.browser_type_name == "webkit":
             browser_type = self.playwright.webkit
         else:
             browser_type = self.playwright.chromium
 
-        launch_options = {
-            "headless": self.headless,
-            "slow_mo": self.slow_mo,
-        }
+        if self.browser is None:
+            try:
+                self.browser = browser_type.launch(**launch_options)
+            except PlaywrightError as primary_error:
+                # Bản desktop không mang theo browser của Playwright để tránh file
+                # cài đặt quá nặng. Trên Windows, dùng Edge/Chrome có sẵn là đủ
+                # để automation hoạt động mà không cần tải browser riêng lần đầu.
+                if self.browser_type_name != "chromium":
+                    self.playwright.stop()
+                    self.playwright = None
+                    raise
 
-        try:
-            self.browser = browser_type.launch(**launch_options)
-        except PlaywrightError as primary_error:
-            # Bản desktop không mang theo browser của Playwright để tránh file
-            # cài đặt quá nặng. Trên Windows, dùng Edge/Chrome có sẵn là đủ
-            # để automation hoạt động mà không cần tải browser riêng lần đầu.
-            if self.browser_type_name != "chromium":
-                self.playwright.stop()
-                self.playwright = None
-                raise
-
-            fallback_errors = []
-            for channel, browser_name in (("msedge", "Microsoft Edge"), ("chrome", "Google Chrome")):
-                try:
-                    self.browser = self.playwright.chromium.launch(
-                        channel=channel,
-                        **launch_options,
-                    )
-                    # stdout của ứng dụng đóng gói trên một số máy Windows dùng
-                    # bảng mã cũ, vì vậy log nội bộ chỉ dùng ký tự ASCII.
-                    print(f"Playwright Chromium missing. Using installed {browser_name}.")
-                    break
-                except PlaywrightError as fallback_error:
-                    fallback_errors.append(f"{browser_name}: {fallback_error}")
-            else:
-                self.playwright.stop()
-                self.playwright = None
-                raise RuntimeError(
-                    "Không tìm thấy Chromium của Playwright, Microsoft Edge hoặc Google Chrome. "
-                    "Hãy cài Microsoft Edge/Google Chrome, hoặc cài Playwright Chromium từ phần thiết lập của app. "
-                    f"Chi tiết: {' | '.join(fallback_errors)}"
-                ) from primary_error
+                fallback_errors = []
+                for channel, browser_name in (("chrome", "Google Chrome"), ("msedge", "Microsoft Edge")):
+                    try:
+                        self.browser = self.playwright.chromium.launch(
+                            channel=channel,
+                            **launch_options,
+                        )
+                        # stdout của ứng dụng đóng gói trên một số máy Windows dùng
+                        # bảng mã cũ, vì vậy log nội bộ chỉ dùng ký tự ASCII.
+                        print(f"Playwright Chromium missing. Using installed {browser_name}.")
+                        break
+                    except PlaywrightError as fallback_error:
+                        fallback_errors.append(f"{browser_name}: {fallback_error}")
+                else:
+                    self.playwright.stop()
+                    self.playwright = None
+                    raise RuntimeError(
+                        "Không tìm thấy Chromium của Playwright, Google Chrome hoặc Microsoft Edge. "
+                        "Hãy cài Google Chrome/Microsoft Edge, hoặc cài Playwright Chromium từ phần thiết lập của app. "
+                        f"Chi tiết: {' | '.join(fallback_errors)}"
+                    ) from primary_error
 
         self.context = self.browser.new_context()
         self.page = self.context.new_page()

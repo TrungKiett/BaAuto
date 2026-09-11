@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             updateStepCount();
             if (data.config) {
-                document.getElementById('config-browser').value  = data.config.browser_type || 'chromium';
+                document.getElementById('config-browser').value  = data.config.browser_type || 'chrome';
                 document.getElementById('config-headless').value = data.config.headless ? 'true' : 'false';
                 document.getElementById('config-keep-open').value= data.config.keep_open ? 'true' : 'false';
                 document.getElementById('config-slowmo').value   = data.config.slow_mo || 500;

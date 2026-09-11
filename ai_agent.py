@@ -9,7 +9,7 @@ import threading
 import uuid
 from datetime import datetime
 
-from playwright.sync_api import sync_playwright, Page
+from playwright.sync_api import Error as PlaywrightError, sync_playwright, Page
 
 from ai_providers import create_provider, BaseAIProvider
 
@@ -126,7 +126,7 @@ class AgentSession:
 
     def __init__(self, session_id: str, goal: str, start_url: str,
                  provider: BaseAIProvider, max_steps: int = 20,
-                 browser_type: str = "chromium", headless: bool = False):
+                 browser_type: str = "chrome", headless: bool = False):
         self.session_id = session_id
         self.goal = goal
         self.start_url = start_url
@@ -161,14 +161,25 @@ class AgentSession:
         """Khởi động Playwright browser."""
         self._playwright = sync_playwright().start()
         
-        browser_map = {
-            "chromium": self._playwright.chromium,
-            "firefox": self._playwright.firefox,
-            "webkit": self._playwright.webkit,
-        }
-        browser_launcher = browser_map.get(self.browser_type, self._playwright.chromium)
-        
-        self._browser = browser_launcher.launch(headless=self.headless, slow_mo=50)
+        if self.browser_type == "chrome":
+            try:
+                self._browser = self._playwright.chromium.launch(
+                    channel="chrome", headless=self.headless, slow_mo=50
+                )
+            except PlaywrightError as error:
+                self._playwright.stop()
+                self._playwright = None
+                raise RuntimeError(
+                    "Không thể mở Google Chrome. Hãy cài Google Chrome hoặc chọn trình duyệt khác trong app."
+                ) from error
+        else:
+            browser_map = {
+                "chromium": self._playwright.chromium,
+                "firefox": self._playwright.firefox,
+                "webkit": self._playwright.webkit,
+            }
+            browser_launcher = browser_map.get(self.browser_type, self._playwright.chromium)
+            self._browser = browser_launcher.launch(headless=self.headless, slow_mo=50)
         context = self._browser.new_context(
             viewport={"width": 1280, "height": 800},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -426,7 +437,7 @@ class SessionManager:
         self._lock = threading.Lock()
 
     def create_session(self, goal: str, start_url: str, provider: BaseAIProvider,
-                       max_steps: int = 20, browser_type: str = "chromium",
+                       max_steps: int = 20, browser_type: str = "chrome",
                        headless: bool = False) -> str:
         """Tạo session mới và trả về session_id."""
         session_id = str(uuid.uuid4())[:8]

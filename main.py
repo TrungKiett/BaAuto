@@ -22,7 +22,7 @@ def main():
     target_url = config.get("target_url", "https://example.com")
     headless = config.get("headless", False)
     slow_mo = config.get("slow_mo", 50)
-    browser_type = config.get("browser_type", "chromium")
+    browser_type = config.get("browser_type", "chrome")
 
     # 2. Khởi tạo Automator
     bot = WebAutomator(
