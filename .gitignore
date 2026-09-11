@@ -40,3 +40,4 @@ Thumbs.db
 # Secrets (không commit API keys!)
 .env
 secrets.json
+auth_session.json

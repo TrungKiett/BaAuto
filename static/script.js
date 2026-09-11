@@ -97,6 +97,60 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLaterBtn.addEventListener('click', hideUpdateBanner);
     checkDesktopUpdate();
 
+    // ── Google account ────────────────────────────────────────────────
+    const accountStatus = document.getElementById('account-status');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    let loginPoll = null;
+
+    function showAccount(auth) {
+        const signedIn = Boolean(auth.authenticated);
+        const name = auth.user?.name || auth.user?.email || 'Tài khoản Google';
+        accountStatus.textContent = signedIn ? `☁ ${name}` : (auth.login_in_progress ? 'Đang chờ đăng nhập Google…' : 'Chưa đăng nhập');
+        googleLoginBtn.classList.toggle('hidden', signedIn);
+        logoutBtn.classList.toggle('hidden', !signedIn);
+        googleLoginBtn.disabled = Boolean(auth.login_in_progress);
+        if (auth.error) accountStatus.textContent = `⚠ ${auth.error}`;
+    }
+
+    async function refreshAuth() {
+        try {
+            const response = await fetch('/api/auth/status');
+            const auth = await response.json();
+            showAccount(auth);
+            if (auth.authenticated || auth.error || !auth.login_in_progress) {
+                clearInterval(loginPoll);
+                loginPoll = null;
+                if (auth.authenticated) loadSavedScripts();
+            }
+        } catch (_) {
+            accountStatus.textContent = 'Không kiểm tra được tài khoản';
+        }
+    }
+
+    googleLoginBtn.addEventListener('click', async () => {
+        googleLoginBtn.disabled = true;
+        accountStatus.textContent = 'Đang mở Google để đăng nhập…';
+        try {
+            const response = await fetch('/api/auth/google/start', { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Không thể bắt đầu đăng nhập.');
+            clearInterval(loginPoll);
+            loginPoll = setInterval(refreshAuth, 1000);
+            refreshAuth();
+        } catch (error) {
+            accountStatus.textContent = `⚠ ${error.message}`;
+            googleLoginBtn.disabled = false;
+        }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        refreshAuth();
+        loadSavedScripts();
+    });
+    refreshAuth();
+
     // ── Tab Switching ──────────────────────────────────────────────────
     const tabScript  = document.getElementById('tab-script');
     const tabAi      = document.getElementById('tab-ai');
@@ -270,6 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch('/api/scripts');
             const scripts = await res.json();
+            if (!res.ok || !Array.isArray(scripts)) {
+                const message = scripts.error || 'Không thể tải kịch bản.';
+                savedScriptsList.innerHTML = `<div style="font-size:0.78rem;color:#ff8096;padding:0.4rem;">${escHtml(message)}</div>`;
+                return;
+            }
             savedScriptsList.innerHTML = '';
             if (scripts.length === 0) {
                 savedScriptsList.innerHTML = '<div style="font-size:0.78rem;color:#6b84a8;padding:0.4rem;">Chưa có kịch bản nào.</div>';
@@ -294,15 +353,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const steps = getStepsData();
         if (steps.length === 0) { alert('Kịch bản trống!'); return; }
         try {
-            await fetch(`/api/scripts/${name}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({steps, config: getConfigData()}) });
+            const res = await fetch(`/api/scripts/${encodeURIComponent(name)}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({steps, config: getConfigData()}) });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Không thể lưu kịch bản.');
             loadSavedScripts();
-        } catch(e) { alert('Lỗi khi lưu kịch bản!'); }
+        } catch(e) { alert(`Lỗi khi lưu kịch bản: ${e.message}`); }
     }
 
     async function loadScript(name) {
         try {
-            const res  = await fetch(`/api/scripts/${name}`);
+            const res  = await fetch(`/api/scripts/${encodeURIComponent(name)}`);
             const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Không thể nạp kịch bản.');
             stepsContainer.innerHTML = '';
             data.steps.forEach(step => {
                 const card = createStepCard(step.action);
@@ -322,15 +384,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('config-slowmo').value   = data.config.slow_mo || 500;
             }
             scriptNameInput.value = name;
-        } catch(e) { alert('Lỗi khi nạp kịch bản!'); }
+        } catch(e) { alert(`Lỗi khi nạp kịch bản: ${e.message}`); }
     }
 
     async function deleteScript(name) {
         if (!confirm(`Bạn có chắc muốn xóa kịch bản "${name}"?`)) return;
         try {
-            await fetch(`/api/scripts/${name}`, { method: 'DELETE' });
+            const res = await fetch(`/api/scripts/${encodeURIComponent(name)}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Không thể xóa kịch bản.');
             loadSavedScripts();
-        } catch(e) { alert('Lỗi khi xóa!'); }
+        } catch(e) { alert(`Lỗi khi xóa: ${e.message}`); }
     }
 
     function getStepsData() {

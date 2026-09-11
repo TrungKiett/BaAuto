@@ -10,6 +10,7 @@ import queue
 from automator import WebAutomator
 from ai_agent import session_manager
 from ai_providers import create_provider
+from auth_service import AuthService
 from version import VERSION, APP_NAME
 
 # ── PyInstaller path resolution ────────────────────────────────────────
@@ -41,6 +42,7 @@ app = Flask(
 )
 
 active_bots = []
+auth_service = AuthService(APP_DIR)
 
 # Queue toàn cục cho update progress (chỉ 1 update tại 1 thời điểm)
 _update_queue: queue.Queue = None
@@ -58,6 +60,13 @@ def save_config(config: dict):
     """Ghi config.json."""
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def _safe_script_name(name: str) -> str:
+    name = (name or "").strip()
+    if not name or len(name) > 120 or any(char in name for char in '\\/:*?"<>|'):
+        raise ValueError("Tên kịch bản không hợp lệ.")
+    return name
 
 
 # ── Existing Script Routes ─────────────────────────────────────────────
@@ -167,6 +176,11 @@ def run_script():
 
 @app.route('/api/scripts', methods=['GET'])
 def list_scripts():
+    if auth_service.status()["authenticated"]:
+        try:
+            return jsonify(auth_service.list_scripts())
+        except Exception as error:
+            return jsonify({"error": str(error)}), 503
     scripts = []
     if os.path.exists(SCRIPTS_DIR):
         for f in os.listdir(SCRIPTS_DIR):
@@ -177,6 +191,16 @@ def list_scripts():
 
 @app.route('/api/scripts/<name>', methods=['GET'])
 def get_script(name):
+    try:
+        name = _safe_script_name(name)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    if auth_service.status()["authenticated"]:
+        try:
+            data = auth_service.get_script(name)
+            return jsonify(data) if data is not None else (jsonify({"error": "Not found"}), 404)
+        except Exception as error:
+            return jsonify({"error": str(error)}), 503
     path = os.path.join(SCRIPTS_DIR, f"{name}.json")
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:
@@ -186,6 +210,16 @@ def get_script(name):
 
 @app.route('/api/scripts/<name>', methods=['POST'])
 def save_script(name):
+    try:
+        name = _safe_script_name(name)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    if auth_service.status()["authenticated"]:
+        try:
+            auth_service.save_script(name, request.json or {})
+            return jsonify({"status": "success", "storage": "cloud"})
+        except Exception as error:
+            return jsonify({"error": str(error)}), 503
     path = os.path.join(SCRIPTS_DIR, f"{name}.json")
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(request.json, f, indent=4)
@@ -194,6 +228,16 @@ def save_script(name):
 
 @app.route('/api/scripts/<name>', methods=['DELETE'])
 def delete_script(name):
+    try:
+        name = _safe_script_name(name)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    if auth_service.status()["authenticated"]:
+        try:
+            auth_service.delete_script(name)
+            return jsonify({"status": "success", "storage": "cloud"})
+        except Exception as error:
+            return jsonify({"error": str(error)}), 503
     path = os.path.join(SCRIPTS_DIR, f"{name}.json")
     if os.path.exists(path):
         os.remove(path)
@@ -298,6 +342,28 @@ def save_ai_config():
     cfg['ai_config']['max_steps']        = int(data.get('max_steps', 20))
     save_config(cfg)
     return jsonify({"status": "saved"})
+
+
+# ── Google Login + Supabase cloud data ─────────────────────────────────
+
+@app.route('/api/auth/status', methods=['GET'])
+def auth_status():
+    return jsonify(auth_service.status())
+
+
+@app.route('/api/auth/google/start', methods=['POST'])
+def auth_google_start():
+    try:
+        auth_service.start_google_login()
+        return jsonify({"status": "started"})
+    except Exception as error:
+        return jsonify({"error": str(error)}), 500
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+def auth_logout():
+    auth_service.logout()
+    return jsonify({"status": "logged_out"})
 
 
 # ── Update Routes ──────────────────────────────────────────────────────

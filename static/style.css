@@ -203,6 +203,27 @@ h1 span {
     margin-left: auto;
 }
 
+.account-area {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.account-status {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font-size: 0.77rem;
+}
+
+.btn-logout {
+    color: var(--text-muted);
+    border-color: rgba(255,255,255,0.1);
+}
+
 .agent-status-bar {
     display: flex;
     align-items: center;
